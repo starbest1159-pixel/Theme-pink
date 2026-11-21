@@ -9,6 +9,30 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
+      // Older versions of this repository served numbered Bannlai images from
+      // public/assets/bannlai. Keep those URLs working with the image files now
+      // stored in the repository root.
+      {
+        name: 'serve-root-bannlai-assets',
+        configureServer(server) {
+          server.middlewares.use((req, _res, next) => {
+            const url = req.url || '';
+            const match = url.match(/^\/assets\/bannlai\/(\d{2})-[^/?]+\.png(\?.*)?$/i);
+            if (!match) {
+              next();
+              return;
+            }
+
+            const assetName = fs
+              .readdirSync(__dirname)
+              .find((name) => name.startsWith(`${match[1]}-`) && name.toLowerCase().endsWith('.png'));
+            if (assetName) {
+              req.url = `/${encodeURIComponent(assetName)}${match[2] || ''}`;
+            }
+            next();
+          });
+        },
+      },
       // Copies src/assets into dist/ so root-relative URLs like
       // "/src/assets/images/..." (e.g. generate_image output) still resolve
       // in production builds. Do not remove.

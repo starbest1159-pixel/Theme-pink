@@ -203,6 +203,19 @@ async function startServer() {
   // Security hardening: never leak server signature or internal details
   app.disable('x-powered-by');
   app.use((req, res, next) => {
+    // Keep existing image URLs working after the public/assets folder was removed.
+    // Numbered image files are still present at the repository root.
+    const match = req.path.match(/^\/assets\/bannlai\/(\d{2})-[^/]+\.png$/i);
+    if (match) {
+      const assetName = fs
+        .readdirSync(__dirname)
+        .find((name) => name.startsWith(`${match[1]}-`) && name.toLowerCase().endsWith('.png'));
+      if (assetName) {
+        res.sendFile(path.join(__dirname, assetName));
+        return;
+      }
+    }
+
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
